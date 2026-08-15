@@ -9,7 +9,7 @@ NASM    = nasm
 all: $(BOOTLOADER) $(KERNEL)
 
 
-$(BOOTLOADER): boot/stage1.asm
+$(BOOTLOADER): boot/boot.asm
 	@mkdir -p build
 	$(NASM) -f bin boot/boot.asm -o $(BOOTLOADER)
 
