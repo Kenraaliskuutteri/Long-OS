@@ -1,0 +1,39 @@
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build Outputs & Binary Files
+*.o
+*.obj
+*.elf
+*.bin
+*.iso
+*.img
+*.qcow2
+*.vmdk
+*.sys
+*.exe
+*.a
+*.so
+*.dylib
+
+# Linker Maps & Debug Symbols
+*.map
+*.sym
+*.d
+
+# Custom Executable / Kernel Files
+x86_64-kernel
+kernel.bin
+kernel.elf
+
+# Build Directories & Logs
+build/
+bin/
+out/
+target/
+*.log
