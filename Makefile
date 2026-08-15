@@ -2,7 +2,6 @@ BOOTLOADER = build/bootloader.bin
 KERNEL     = build/kernel.bin
 ISO_IMAGE  = build/longos-live.iso
 
-# Compiler & Assembler Flags
 CC      = gcc
 CFLAGS  = -ffreestanding -m64 -O2 -Wall -Wextra -Ikernel
 NASM    = nasm
@@ -12,7 +11,7 @@ all: $(BOOTLOADER) $(KERNEL)
 
 $(BOOTLOADER): boot/stage1.asm
 	@mkdir -p build
-	$(NASM) -f bin boot/stage1.asm -o $(BOOTLOADER)
+	$(NASM) -f bin boot/boot.asm -o $(BOOTLOADER)
 
 $(KERNEL): kernel/main.c kernel/arch/x86_64/idt.c
 	@mkdir -p build
