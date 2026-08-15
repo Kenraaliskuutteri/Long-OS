@@ -28,6 +28,11 @@ typedef enum {
     VGA_COLOR_WHITE = 15,
 } vga_color_t;
 
+void vga_init(void);
+void vga_clear(void);
+void vga_putc(char c);
+void vga_puts(const char* str);
+
 
 static inline uint8_t vga_entry_color(vga_color_t fg, vga_color_t bg) {
     return fg | (bg << 4);
