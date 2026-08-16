@@ -1,4 +1,6 @@
 #include "drivers/keyboard.h"
+#include "drivers/vga.h"
+#include "lib/string.h"
 #include "arch/x86_64/io.h"
 
 void handle_command(const char *input_buffer) {

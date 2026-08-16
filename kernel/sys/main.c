@@ -1,16 +1,7 @@
-#ifndef VGA_H
-#define VGA_H
-
 #include "drivers/vga.h"
 #include "../../include/kernel/gdt.h"
 #include "kernel/idt.h"
 #include "stdint.h"
-
-void tty_init(void);
-void tty_puts(const char *str);
-void tty_putchar(char c);
-void tty_switch(uint8_t tty_index);
-uint8_t tty_get_active(void);
 
 void kmain(void) {
     tty_init();
@@ -35,4 +26,3 @@ void kmain(void) {
         __asm__ __volatile__("hlt");
     }
 }
-#endif

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "drivers/vga.h"
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -19,8 +20,8 @@ void tty_init(void) {
     for (int i = 0; i < NUM_TTYS; i++) {
         ttys[i].cursor_x = 0;
         ttys[i].cursor_y = 0;
-        ttys[i].color = 0x0F; // White on black
-        
+        ttys[i].color = 0x0F;
+
         for (int j = 0; j < VGA_WIDTH * VGA_HEIGHT; j++) {
             ttys[i].buffer[j] = (0x0F << 8) | ' ';
         }
@@ -78,7 +79,6 @@ void tty_putchar_id(uint8_t id, char c) {
     }
 }
 
-
 void tty_putchar(char c) {
     tty_putchar_id(active_tty, c);
 }
@@ -91,4 +91,9 @@ void tty_puts(const char *str) {
 
 uint8_t tty_get_active(void) {
     return active_tty;
+}
+
+void vga_print(const char *str, uint8_t color) {
+    ttys[active_tty].color = color;
+    tty_puts(str);
 }

@@ -8,5 +8,6 @@ typedef enum {
 
 void keyboard_set_layout(kb_layout_t layout);
 kb_layout_t keyboard_get_layout(void);
+char keyboard_getchar(void);
 
 #endif

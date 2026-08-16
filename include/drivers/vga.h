@@ -8,7 +8,6 @@
 #define VGA_HEIGHT 25
 #define VGA_MEMORY ((uint16_t*)0xB8000) 
 
-// Hardware VGA Text Mode Colors
 typedef enum {
     VGA_COLOR_BLACK = 0,
     VGA_COLOR_BLUE = 1,
@@ -28,11 +27,13 @@ typedef enum {
     VGA_COLOR_WHITE = 15,
 } vga_color_t;
 
-void vga_init(void);
-void vga_clear(void);
-void vga_putc(char c);
-void vga_puts(const char* str);
-
+void tty_init(void);
+void tty_puts(const char *str);
+void tty_putchar(char c);
+void tty_putchar_id(uint8_t id, char c);
+void tty_switch(uint8_t tty_index);
+uint8_t tty_get_active(void);
+void vga_print(const char *str, uint8_t color);
 
 static inline uint8_t vga_entry_color(vga_color_t fg, vga_color_t bg) {
     return fg | (bg << 4);
@@ -41,11 +42,5 @@ static inline uint8_t vga_entry_color(vga_color_t fg, vga_color_t bg) {
 static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t)uc | ((uint16_t)color << 8);
 }
-
-// Function Declarations
-void vga_init(void);
-void vga_clear(void);
-void vga_putc(char c);
-void vga_puts(const char* str);
 
 #endif

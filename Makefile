@@ -3,7 +3,7 @@ KERNEL     = build/kernel.bin
 ISO_IMAGE  = build/longos-live.iso
 
 CC      = gcc
-CFLAGS  = -ffreestanding -m64 -O2 -Wall -Wextra -Iinclude
+CFLAGS  = -ffreestanding -m64 -O2 -Wall -Wextra -Iinclude -Ikernel
 NASM    = nasm
 
 all: $(BOOTLOADER) $(KERNEL)
@@ -13,16 +13,17 @@ $(BOOTLOADER): boot/boot.asm
 	@mkdir -p build
 	$(NASM) -f bin boot/boot.asm -o $(BOOTLOADER)
 
-$(KERNEL): kernel/sys/main.c kernel/arch/x86_64/idt.c kernel/arch/x86_64/gdt.c kernel/drivers/display/vga.c kernel/sys/shell.c
+$(KERNEL): kernel/sys/main.c kernel/arch/x86_64/idt.c kernel/arch/x86_64/gdt.c kernel/drivers/display/vga.c kernel/sys/shell.c kernel/drivers/input/keyboard.c kernel/lib/string.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -c kernel/sys/main.c -o build/main.o
 	$(CC) $(CFLAGS) -c kernel/arch/x86_64/idt.c -o build/idt.o
 	$(CC) $(CFLAGS) -c kernel/arch/x86_64/gdt.c -o build/gdt.o
 	$(CC) $(CFLAGS) -c kernel/drivers/display/vga.c -o build/vga.o
-	# Link kernel binaries together
-	ld -m elf_x86_64 -T x86_64-kernel.ld build/main.o build/idt.o build/gdt.o build/vga.o -o $(KERNEL)
 	$(CC) $(CFLAGS) -c kernel/sys/shell.c -o build/shell.o
-	ld -m elf_x86_64 -T linker.ld build/main.o build/shell.o -o $(KERNEL)
+	$(CC) $(CFLAGS) -c kernel/drivers/input/keyboard.c -o build/keyboard.o
+	$(CC) $(CFLAGS) -c kernel/lib/string.c -o build/string.o
+	# Link kernel binaries together
+	ld -m elf_x86_64 -T x86_64-kernel.ld build/main.o build/idt.o build/gdt.o build/vga.o build/shell.o build/keyboard.o build/string.o -o $(KERNEL)
 
 
 iso: all
