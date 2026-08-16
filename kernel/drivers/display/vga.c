@@ -1,75 +1,94 @@
-#include "drivers/vga.h"
-#include "../../arch/x86_64/io.h"
+#include <stdint.h>
 
-static size_t vga_row;
-static size_t vga_col;
-static uint8_t vga_color;
-static uint16_t* vga_buffer;
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+#define VGA_MEM ((volatile uint16_t*)0xB8000)
+#define NUM_TTYS 4
 
-// Hardware cursor control using port I/O
-static void update_cursor(int x, int y) {
-    uint16_t pos = y * VGA_WIDTH + x;
-    outb(0x3D4, 0x0F);
-    outb(0x3D5, (uint8_t)(pos & 0xFF));
-    outb(0x3D4, 0x0E);
-    outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
-}
+typedef struct {
+    uint8_t cursor_x;
+    uint8_t cursor_y;
+    uint8_t color;
+    uint16_t buffer[VGA_WIDTH * VGA_HEIGHT];
+} tty_t;
 
-void vga_init(void) {
-    vga_row = 0;
-    vga_col = 0;
-    vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-    vga_buffer = VGA_MEMORY;
-    vga_clear();
-}
+static tty_t ttys[NUM_TTYS];
+static uint8_t active_tty = 0; 
 
-void vga_clear(void) {
-    for (size_t y = 0; y < VGA_HEIGHT; y++) {
-        for (size_t x = 0; x < VGA_WIDTH; x++) {
-            const size_t index = y * VGA_WIDTH + x;
-            vga_buffer[index] = vga_entry(' ', vga_color);
+void tty_init(void) {
+    for (int i = 0; i < NUM_TTYS; i++) {
+        ttys[i].cursor_x = 0;
+        ttys[i].cursor_y = 0;
+        ttys[i].color = 0x0F; // White on black
+        
+        for (int j = 0; j < VGA_WIDTH * VGA_HEIGHT; j++) {
+            ttys[i].buffer[j] = (0x0F << 8) | ' ';
         }
     }
-    vga_row = 0;
-    vga_col = 0;
-    update_cursor(0, 0);
 }
 
-void vga_putc(char c) {
+static void scroll(tty_t *tty) {
+    if (tty->cursor_y >= VGA_HEIGHT) {
+        for (int i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++) {
+            tty->buffer[i] = tty->buffer[i + VGA_WIDTH];
+        }
+        for (int i = (VGA_HEIGHT - 1) * VGA_WIDTH; i < VGA_HEIGHT * VGA_WIDTH; i++) {
+            tty->buffer[i] = (tty->color << 8) | ' ';
+        }
+        tty->cursor_y = VGA_HEIGHT - 1;
+    }
+}
+
+void tty_flush(void) {
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+        VGA_MEM[i] = ttys[active_tty].buffer[i];
+    }
+}
+
+void tty_switch(uint8_t tty_index) {
+    if (tty_index >= NUM_TTYS || tty_index == active_tty) return;
+    active_tty = tty_index;
+    tty_flush();
+}
+
+void tty_putchar_id(uint8_t id, char c) {
+    if (id >= NUM_TTYS) return;
+    tty_t *tty = &ttys[id];
+
     if (c == '\n') {
-        vga_col = 0;
-        vga_row++;
-    } else if (c == '\r') {
-        vga_col = 0;
+        tty->cursor_x = 0;
+        tty->cursor_y++;
+    } else if (c == '\b') {
+        if (tty->cursor_x > 0) {
+            tty->cursor_x--;
+            tty->buffer[tty->cursor_y * VGA_WIDTH + tty->cursor_x] = (tty->color << 8) | ' ';
+        }
     } else {
-        const size_t index = vga_row * VGA_WIDTH + vga_col;
-        vga_buffer[index] = vga_entry(c, vga_color);
-        vga_col++;
-    }
-
-    if (vga_col >= VGA_WIDTH) {
-        vga_col = 0;
-        vga_row++;
-    }
-
-    // Scroll if reaching bottom of screen
-    if (vga_row >= VGA_HEIGHT) {
-        for (size_t y = 1; y < VGA_HEIGHT; y++) {
-            for (size_t x = 0; x < VGA_WIDTH; x++) {
-                vga_buffer[(y - 1) * VGA_WIDTH + x] = vga_buffer[y * VGA_WIDTH + x];
-            }
+        tty->buffer[tty->cursor_y * VGA_WIDTH + tty->cursor_x] = (tty->color << 8) | (unsigned char)c;
+        tty->cursor_x++;
+        if (tty->cursor_x >= VGA_WIDTH) {
+            tty->cursor_x = 0;
+            tty->cursor_y++;
         }
-        for (size_t x = 0; x < VGA_WIDTH; x++) {
-            vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = vga_entry(' ', vga_color);
-        }
-        vga_row = VGA_HEIGHT - 1;
     }
+    scroll(tty);
 
-    update_cursor(vga_col, vga_row);
+    if (id == active_tty) {
+        tty_flush();
+    }
 }
 
-void vga_puts(const char* str) {
-    for (size_t i = 0; str[i] != '\0'; i++) {
-        vga_putc(str[i]);
+
+void tty_putchar(char c) {
+    tty_putchar_id(active_tty, c);
+}
+
+void tty_puts(const char *str) {
+    while (*str) {
+        tty_putchar(*str++);
     }
+}
+
+uint8_t tty_get_active(void) {
+    return active_tty;
 }
