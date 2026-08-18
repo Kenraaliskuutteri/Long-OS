@@ -97,3 +97,49 @@ void vga_print(const char *str, uint8_t color) {
     ttys[active_tty].color = color;
     tty_puts(str);
 }
+
+void tty_set_color(uint8_t tty_id, uint8_t fg, uint8_t bg) {
+    if (tty_id >= NUM_TTYS) return;
+    ttys[tty_id].color = (bg << 4) | (fg & 0x0F);
+}
+
+void tty_set_active_color(uint8_t fg, uint8_t bg) {
+    tty_set_color(active_tty, fg, bg);
+}
+
+
+void tty_clear(void) {
+    tty_t *tty = &ttys[active_tty];
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+        tty->buffer[i] = (tty->color << 8) | ' ';
+    }
+    tty->cursor_x = 0;
+    tty->cursor_y = 0;
+    tty_flush();
+}
+
+typedef struct {
+    uint16_t width;
+    uint16_t height;
+    uint8_t active_tty;
+} console_state_t;
+
+
+static console_state_t current_console = {
+    .width = 80,   
+    .height = 25,
+    .active_tty = 0
+};
+
+uint16_t tty_get_width(void) {
+    return current_console.width;
+}
+
+uint16_t tty_get_height(void) {
+    return current_console.height;
+}
+
+void tty_set_dimensions(uint16_t width, uint16_t height) {
+    current_console.width = width;
+    current_console.height = height;
+}

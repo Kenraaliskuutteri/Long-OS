@@ -1,61 +1,83 @@
 #include "drivers/keyboard.h"
 #include "drivers/vga.h"
 #include "lib/string.h"
-#include "arch/x86_64/io.h"
 
-void handle_command(const char *input_buffer) {
-    if (strcmp(input_buffer, "help") == 0) {
-        vga_print("Commands: help, echo <text>, keyb [us|fi]", 2);
-    } 
-    else if (strcmp_prefix(input_buffer, "echo ")) {
-        vga_print(input_buffer + 5, 2);
-    } 
-    else if (strcmp(input_buffer, "keyb") == 0) {
-        kb_layout_t current = keyboard_get_layout();
-        if (current == LAYOUT_FI) {
-            vga_print("Current layout: FI (Finnish)", 2);
-        } else {
-            vga_print("Current layout: US (Default)", 2);
-        }
-        // This really fries my brains with how the commands are made, and all together the shell. But if it works, it works.
-    } 
-    else if (strcmp(input_buffer, "keyb fi") == 0) {
-        keyboard_set_layout(LAYOUT_FI);
-        vga_print("Switched layout to Finnish", 2);
-    } 
-    else if (strcmp(input_buffer, "keyb us") == 0) {
-        keyboard_set_layout(LAYOUT_US);
-        vga_print("Switched layout to US", 2);
-    } 
-    else {
-        vga_print("Unknown command. Type 'help'.", 2);
+#define BUFFER_SIZE 128
+
+// External function prototypes implemented in kernel/sys/commands/
+void cmd_help(const char *args);
+void cmd_fetch(const char *args);
+void cmd_meminfo(const char *args);
+void cmd_wall(const char *args);
+
+typedef void (*cmd_fn_t)(const char *args);
+
+typedef struct {
+    const char *name;
+    cmd_fn_t handler;
+} command_t;
+
+static const command_t cmd_table[] = {
+    {"help",    cmd_help},
+    {"fetch",   cmd_fetch},
+    {"meminfo", cmd_meminfo},
+    {"wall",    cmd_wall}
+};
+
+#define CMD_COUNT (sizeof(cmd_table) / sizeof(command_t))
+
+static void dispatch_command(const char *input_buffer) {
+    if (input_buffer[0] == '\0') return;
+
+    char cmd_name[32];
+    size_t i = 0;
+
+    // Parse command name
+    while (input_buffer[i] != ' ' && input_buffer[i] != '\0' && i < 31) {
+        cmd_name[i] = input_buffer[i];
+        i++;
     }
+    cmd_name[i] = '\0';
+
+    const char *args = (input_buffer[i] == ' ') ? &input_buffer[i + 1] : "";
+
+  
+    for (size_t j = 0; j < CMD_COUNT; j++) {
+        if (strcmp(cmd_name, cmd_table[j].name) == 0) {
+            cmd_table[j].handler(args);
+            return;
+        }
+    }
+
+    tty_puts("Unknown command. Type 'help'.\n");
 }
 
-void tty_puts(const char *str);
-void tty_putchar(char c);
-void handle_command(const char *input_buffer);
+static void print_prompt(void) {
+    tty_puts("longos@tty");
+    tty_putchar('1' + tty_get_active());
+    tty_puts("> ");
+}
 
 void shell_run(void) {
-    char buffer[128];
+    char buffer[BUFFER_SIZE];
     uint8_t index = 0;
 
-    tty_puts("\nLong-OS tty1\n> ");
+    print_prompt();
 
     while (1) {
-        char c = keyboard_getchar(); 
+        char c = keyboard_getchar();
         if (!c) continue;
 
         if (c == '\n') {
             tty_putchar('\n');
             buffer[index] = '\0';
-            
+
             if (index > 0) {
-                handle_command(buffer);
+                dispatch_command(buffer);
             }
-            
+
             index = 0;
-            tty_puts("\n> ");
+            print_prompt();
         } 
         else if (c == '\b') {
             if (index > 0) {
@@ -63,7 +85,7 @@ void shell_run(void) {
                 tty_putchar('\b');
             }
         } 
-        else if (index < sizeof(buffer) - 1) {
+        else if (index < BUFFER_SIZE - 1) {
             buffer[index++] = c;
             tty_putchar(c);
         }

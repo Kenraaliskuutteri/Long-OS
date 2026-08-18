@@ -2,6 +2,24 @@
 [BITS 16]
 [ORG 0x7c00]
 
+detect_memory:
+    ; Query extended memory size (in KB) above 1MB via BIOS INT 15h, AH=88h
+    mov ah, 0x88
+    int 0x15
+    jc .error               ; Carry flag set on error
+
+    ; AX now contains extended memory in KB
+    ; Add 1024 KB (1MB) to account for conventional base memory
+    add ax, 1024            
+
+    ; Store total KB result at fixed physical address 0x7000
+    mov [0x7000], ax
+    ret
+
+.error:
+    mov word [0x7000], 0    ; Store 0 if detection failed
+    ret
+
 CODE_OFFSET equ 0x8
 DATA_OFFSET equ 0x10
 CODE64_OFFSET equ 0x18

@@ -43,4 +43,8 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t)uc | ((uint16_t)color << 8);
 }
 
+uint16_t tty_get_width(void);
+uint16_t tty_get_height(void);
+void tty_set_dimensions(uint16_t width, uint16_t height);
+
 #endif
